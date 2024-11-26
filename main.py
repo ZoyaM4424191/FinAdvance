@@ -5,13 +5,9 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import pdfplumber
 from fpdf import FPDF
-import openai
-
-# Set your OpenAI API Key
-openai.api_key = "your-openai-api-key"  # Replace with your actual API key
 
 # App Title
-st.title("Financial Document Analysis with Growth, Anomaly Detection, and AI Insights")
+st.title("Financial Document Analysis with Growth Insights and PDF Reporting")
 
 # Helper Function to Extract Table from PDF
 def extract_pdf_table(pdf_file):
@@ -29,46 +25,10 @@ def clean_column_names(df):
     return df
 
 # Helper Function to Calculate Growth Insights
-def calculate_growth(df, amount_column):
+def calculate_growth(df, salary_column, amount_column):
     df[amount_column] = pd.to_numeric(df[amount_column], errors='coerce')
     df['Growth Rate'] = df[amount_column].pct_change() * 100
     return df
-
-# Helper Function for Threshold-Based Anomaly Detection
-def detect_anomalies(df, amount_column, lower_threshold, upper_threshold):
-    df['Anomaly'] = (df[amount_column] < lower_threshold) | (df[amount_column] > upper_threshold)
-    anomalies = df[df['Anomaly']]
-    return anomalies
-
-# Function to Generate AI Insights using OpenAI
-def generate_ai_insights(data, anomalies):
-    # Format data and anomalies for the prompt
-    data_summary = data.describe().to_string()
-    anomaly_summary = anomalies.to_string(index=False) if not anomalies.empty else "No anomalies detected."
-    
-    # Prepare the prompt
-    prompt = f"""
-    You are a financial analyst. Analyze the following financial data:
-    
-    Summary Statistics:
-    {data_summary}
-    
-    Detected Anomalies:
-    {anomaly_summary}
-    
-    Provide insights on trends, anomalies, and any recommendations based on the data.
-    """
-    
-    # Call OpenAI API
-    response = openai.ChatCompletion.create(
-        model="gpt-4",  # Use "gpt-4" or "gpt-3.5-turbo" depending on your API subscription
-        messages=[
-            {"role": "system", "content": "You are a financial analyst providing detailed insights."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.7
-    )
-    return response['choices'][0]['message']['content']
 
 # Helper Function to Generate PDF Report
 def generate_pdf_report(report_data):
@@ -110,61 +70,35 @@ if uploaded_file:
             st.markdown("### Uploaded Data Preview:")
             st.dataframe(df)
 
-            # Select the column for analysis
-            amount_column = st.selectbox("Select the column to analyze for growth and anomalies:", df.columns)
+            column_mapping = {
+                'Salary Amount': 'Salary',
+                'Total Amount': 'Total Amount'
+            }
 
-            if amount_column:
-                # Growth Insights
-                df = calculate_growth(df, amount_column)
+            mapped_columns = {new_col: old_col for old_col, new_col in column_mapping.items() if old_col in df.columns}
+            salary_column = mapped_columns.get('Salary')
+            amount_column = mapped_columns.get('Total Amount')
 
-                # User-Defined Thresholds
-                st.markdown("### Set Anomaly Detection Thresholds")
-                lower_threshold = st.number_input("Enter lower threshold:", value=df[amount_column].min())
-                upper_threshold = st.number_input("Enter upper threshold:", value=df[amount_column].max())
-
-                # Anomaly Detection
-                anomalies = detect_anomalies(df, amount_column, lower_threshold, upper_threshold)
+            if salary_column and amount_column:
+                df = calculate_growth(df, salary_column, amount_column)
 
                 st.markdown("### Growth Insights:")
-                st.dataframe(df[[amount_column, 'Growth Rate']].style.format({'Growth Rate': "{:.2f}%"}))
+                st.dataframe(df[[salary_column, amount_column, 'Growth Rate']].style.format({'Growth Rate': "{:.2f}%"}))
 
-                # Plotting Growth Insights
                 fig, ax = plt.subplots()
-                ax.plot(df.index, df[amount_column], label="Values")
-                ax.axhline(y=lower_threshold, color='red', linestyle='--', label="Lower Threshold")
-                ax.axhline(y=upper_threshold, color='green', linestyle='--', label="Upper Threshold")
-                ax.set_title('Growth and Threshold-Based Anomalies')
-                ax.set_ylabel(amount_column)
-                ax.legend()
+                ax.plot(df[salary_column], df[amount_column], label="Total Amount")
+                ax.set_title('Growth Insights')
                 st.pyplot(fig)
 
-                # Display Anomalies
-                if not anomalies.empty:
-                    st.markdown("### Anomalies Detected:")
-                    st.dataframe(anomalies)
-                    st.warning(f"Detected {len(anomalies)} anomalies based on the defined thresholds.")
-                else:
-                    st.success("No anomalies detected based on the thresholds.")
-
-                # Generate AI Insights
-                with st.spinner("Generating AI Insights..."):
-                    ai_insights = generate_ai_insights(df, anomalies)
-                st.markdown("### AI-Generated Insights:")
-                st.write(ai_insights)
-
-                # PDF Report
                 report_data = {
-                    "Overview": "Financial performance analysis with growth and threshold-based anomaly detection.",
-                    "Growth Insights": "Growth rates and detected anomalies are included in the analysis.",
-                    "Anomalies": anomalies.to_string(index=False) if not anomalies.empty else "No anomalies detected.",
-                    "AI Insights": ai_insights
+                    "Overview": "Financial performance analysis with growth trends.",
+                    "Growth Insights": "Detailed growth rates based on salary levels."
                 }
                 pdf_report = generate_pdf_report(report_data)
 
-                # Adding a Download Button for PDF Report
-                st.download_button("Download PDF Report", data=pdf_report, file_name="financial_report_with_ai_insights.pdf", mime="application/pdf")
+                st.download_button("Download PDF Report", data=pdf_report, file_name="financial_report.pdf", mime="application/pdf")
             else:
-                st.error("Please select a column for analysis.")
+                st.error("Required columns not found.")
         else:
             st.error("No data extracted from the document.")
     except Exception as e:

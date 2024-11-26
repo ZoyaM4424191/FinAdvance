@@ -1,0 +1,8 @@
+streamlit
+pandas
+pdfplumber
+matplotlib
+openpyxl
+reportlab
+tk
+fpdf

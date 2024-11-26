@@ -6,9 +6,7 @@ from io import BytesIO
 import pdfplumber
 from fpdf import FPDF
 import openai
-
-# Set your OpenAI API Key
-openai.api_key = "your-openai-api-key"  # Replace with your actual API key
+# Replace with your actual API key
 
 # App Title
 st.title("Financial Document Analysis with Growth, Anomaly Detection, and AI Insights")

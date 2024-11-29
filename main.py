@@ -5,8 +5,12 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import pdfplumber
 from fpdf import FPDF
+from dotenv import load_dotenv
+import os
 import openai
-# Replace with your actual API key
+
+# Load environment variables from .env
+load_dotenv()
 
 # App Title
 st.title("Financial Document Analysis with Growth, Anomaly Detection, and AI Insights")
@@ -40,9 +44,11 @@ def detect_anomalies(df, amount_column, lower_threshold, upper_threshold):
 
 # Function to Generate AI Insights using OpenAI
 def generate_ai_insights(data, anomalies):
+    # Format data and anomalies for the prompt
     data_summary = data.describe().to_string()
     anomaly_summary = anomalies.to_string(index=False) if not anomalies.empty else "No anomalies detected."
     
+    # Prepare the prompt
     prompt = f"""
     You are a financial analyst. Analyze the following financial data:
     
@@ -55,15 +61,17 @@ def generate_ai_insights(data, anomalies):
     Provide insights on trends, anomalies, and any recommendations based on the data.
     """
     
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a financial analyst providing detailed insights."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.7
-    )
-    return response['choices'][0]['message']['content']
+    # Call OpenAI API
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo", 
+            messages=[{"role": "system", "content": "You are a financial analyst providing detailed insights."},
+                      {"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        return response['choices'][0]['message']['content']
+    except Exception as e:
+        return f"Error generating insights: {e}"
 
 # Helper Function to Generate PDF Report
 def generate_pdf_report(report_data):
@@ -105,25 +113,25 @@ if uploaded_file:
             st.markdown("### Uploaded Data Preview:")
             st.dataframe(df)
 
-            # Select Column for Analysis
+            # Select the column for analysis
             amount_column = st.selectbox("Select the column to analyze for growth and anomalies:", df.columns)
 
             if amount_column:
-                # Calculate Growth Insights
+                # Growth Insights
                 df = calculate_growth(df, amount_column)
 
-                # User-Defined Thresholds for Anomaly Detection
+                # User-Defined Thresholds
                 st.markdown("### Set Anomaly Detection Thresholds")
                 lower_threshold = st.number_input("Enter lower threshold:", value=df[amount_column].min())
                 upper_threshold = st.number_input("Enter upper threshold:", value=df[amount_column].max())
 
-                # Detect Anomalies
+                # Anomaly Detection
                 anomalies = detect_anomalies(df, amount_column, lower_threshold, upper_threshold)
 
                 st.markdown("### Growth Insights:")
                 st.dataframe(df[[amount_column, 'Growth Rate']].style.format({'Growth Rate': "{:.2f}%"}))
 
-                # Plot Growth and Anomalies
+                # Plotting Growth Insights
                 fig, ax = plt.subplots()
                 ax.plot(df.index, df[amount_column], label="Values")
                 ax.axhline(y=lower_threshold, color='red', linestyle='--', label="Lower Threshold")
@@ -137,7 +145,7 @@ if uploaded_file:
                 if not anomalies.empty:
                     st.markdown("### Anomalies Detected:")
                     st.dataframe(anomalies)
-                    st.warning(f"Detected {len(anomalies)} anomalies based on the thresholds.")
+                    st.warning(f"Detected {len(anomalies)} anomalies based on the defined thresholds.")
                 else:
                     st.success("No anomalies detected based on the thresholds.")
 
@@ -148,14 +156,18 @@ if uploaded_file:
                 st.write(ai_insights)
 
                 # PDF Report
+                openai.api_key = os.getenv("OPENAI_API_KEY")
+                
                 report_data = {
                     "Overview": "Financial performance analysis with growth and threshold-based anomaly detection.",
                     "Growth Insights": "Growth rates and detected anomalies are included in the analysis.",
                     "Anomalies": anomalies.to_string(index=False) if not anomalies.empty else "No anomalies detected.",
                     "AI Insights": ai_insights
                 }
+
                 pdf_report = generate_pdf_report(report_data)
 
+                # Adding a Download Button for PDF Report
                 st.download_button("Download PDF Report", data=pdf_report, file_name="financial_report_with_ai_insights.pdf", mime="application/pdf")
             else:
                 st.error("Please select a column for analysis.")
@@ -163,4 +175,3 @@ if uploaded_file:
             st.error("No data extracted from the document.")
     except Exception as e:
         st.error(f"Error: {e}")
-

@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 import os
 import openai
 
+
+openai.api_key = "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"
+
 # Load environment variables from .env
 load_dotenv()
 

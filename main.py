@@ -10,7 +10,7 @@ import os
 import openai
 
 
-openai.api_key = "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"
+openai.api_key = "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"
 # Load environment variables from .env
 load_dotenv()
 

@@ -22,11 +22,8 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Set OpenAI API Key
-        env:
-          openai_api_key: ${{ secrets.openai_api_key }}
-        run: |
-          echo "API Key Set in Environment Variable"
+      name: Set API key environment variable
+      run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
 
       - name: Run the app
         run: |

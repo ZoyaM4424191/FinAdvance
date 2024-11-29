@@ -6,3 +6,4 @@ openpyxl
 reportlab
 tk
 fpdf
+python-dotenv

@@ -7,4 +7,4 @@ reportlab
 tk
 fpdf
 python-dotenv
-openai
+openai==0.28

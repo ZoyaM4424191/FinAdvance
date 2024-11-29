@@ -3,7 +3,7 @@ name: Deploy Financial Analysis App
 on:
   push:
     branches:
-      - main.py
+      - main
 
 jobs:
   build:
